@@ -1,0 +1,3 @@
+﻿src/blockchain/mintPoC.ts(4,26): error TS2307: Cannot find module '@solana-mobile/mobile-wallet-adapter-react-native' or its corresponding type declarations.
+src/blockchain/StorageService.ts(1,26): error TS2307: Cannot find module '@react-native-async-storage/async-storage' or its corresponding type declarations.
+src/components/WalletConnect.tsx(3,26): error TS2307: Cannot find module '@solana-mobile/mobile-wallet-adapter-react-native' or its corresponding type declarations.

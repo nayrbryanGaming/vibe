@@ -1,0 +1,35 @@
+﻿node.exe : npm warn Unknown project 
+config "always-auth". This will stop 
+working in the next major version of 
+npm.
+At line:1 char:1
++ & "C:\nvm4w\nodejs/node.exe" "C:\nvm4
+w\nodejs/node_modules/npm/bin/np ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpeci 
+   fied: (npm warn Unknow...version o  
+  f npm.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCo 
+   mmandError
+ 
+npm error code E404
+npm error 404 Not Found - GET https://r
+egistry.npmjs.org/@solana-mobile%2fmobi
+le-wallet-adapter-react-native - Not 
+found
+npm error 404
+npm error 404  The requested resource '
+@solana-mobile/mobile-wallet-adapter-re
+act-native@^2.1.0' could not be found 
+or you do not have permission to 
+access it.
+npm error 404
+npm error 404 Note that you can also 
+install from a
+npm error 404 tarball, folder, http 
+url, or git url.
+npm error A complete log of this run 
+can be found in: C:\Users\arche\AppData
+\Local\npm-cache\_logs\2026-03-06T18_50
+_32_511Z-debug-0.log
