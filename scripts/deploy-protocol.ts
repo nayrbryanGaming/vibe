@@ -49,14 +49,14 @@ async function deploy() {
     try {
         let balance = await umi.rpc.getBalance(protocolAuthority.publicKey);
         if (balance.basisPoints === BigInt(0)) {
-            console.log('[VIBE Deploy] Balance is 0. Requesting multiple small airdrops...');
-            for (let i = 0; i < 2; i++) {
+            console.log('[VIBE Deploy] Balance is 0. Requesting multiple micro-airdrops (0.1 SOL)...');
+            for (let i = 0; i < 5; i++) {
                 try {
-                    await umi.rpc.airdrop(protocolAuthority.publicKey, sol(0.5));
-                    console.log(`[VIBE Deploy] Airdrop ${i + 1} requested.`);
-                    await new Promise(r => setTimeout(r, 2000));
+                    await umi.rpc.airdrop(protocolAuthority.publicKey, sol(0.1));
+                    console.log(`[VIBE Deploy] Micro-Airdrop ${i + 1} requested.`);
+                    await new Promise(r => setTimeout(r, 5000));
                 } catch (e) {
-                    console.warn(`[VIBE Deploy] Airdrop ${i + 1} failed.`);
+                    console.warn(`[VIBE Deploy] Micro-Airdrop ${i + 1} failed.`);
                 }
             }
         }
