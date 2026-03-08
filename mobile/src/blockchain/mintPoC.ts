@@ -20,7 +20,19 @@ export interface PoCMetadata {
 export async function mintPoC(metadata: PoCMetadata) {
     const umi = getUmi();
 
-    console.log('[mintPoC] Starting mint process for:', metadata.walletA, 'and', metadata.walletB);
+    // HACKATHON FAIL-SAFE: If the address is a placeholder, return a mock success
+    if (BUBBLEGUM_TREE_ADDRESS.toString().startsWith('vibeT5XW')) {
+        console.log('[mintPoC] Detected placeholder address, entering Demo Mode.');
+        await new Promise<void>(resolve => setTimeout(resolve, 2000)); // Simulate chain latency
+        return {
+            success: true,
+            signature: 'DEMO_' + Math.random().toString(36).substring(7),
+            data: metadata,
+            isDemo: true
+        };
+    }
+
+    console.log('[mintPoC] Starting REAL mint process for:', metadata.walletA, 'and', metadata.walletB);
 
     try {
         // 1. Build the transaction using Bubblegum SDK (Umi implementation)
@@ -49,7 +61,7 @@ export async function mintPoC(metadata: PoCMetadata) {
             });
 
             // 3. Ensure transaction has a fresh blockhash
-            const { blockhash } = await umi.rpc.getLatestBlockhash();
+            const { blockhash } = await umi.rpc.getLatestBlockhash({ commitment: 'confirmed' });
 
             // 4. Build unsigned Umi transaction and convert to Web3.js format
             const umiTx = txBuilder.setBlockhash(blockhash).build(umi);

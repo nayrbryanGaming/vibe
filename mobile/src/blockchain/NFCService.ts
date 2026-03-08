@@ -36,8 +36,9 @@ class NFCService {
             ]);
 
             if (bytes) {
-                // await NfcManager.setNdefPushMessage(bytes); 
-                console.log('NFC broadcast payload prepared (Android Beam is deprecated, use HCE for production):', address);
+                // NfcManager.setNdefPushMessage is deprecated or not available in this version.
+                // Handshake logic is centered on QR and NDEF reading.
+                console.log('[NFC] Payload broadcast prepared:', address);
             }
         } catch (ex) {
             console.warn('NFC broadcast failed:', ex);

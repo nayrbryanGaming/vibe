@@ -23,7 +23,7 @@ import * as fs from 'fs';
  */
 
 async function deploy() {
-    const RPC_ENDPOINT = 'https://api.testnet.solana.com';
+    const RPC_ENDPOINT = 'https://api.devnet.solana.com';
     const umi = createUmi(RPC_ENDPOINT)
         .use(mplBubblegum())
         .use(mplTokenMetadata());
@@ -43,23 +43,42 @@ async function deploy() {
     umi.use(keypairIdentity(protocolAuthority));
 
     console.log('[VIBE Deploy] Protocol Authority:', protocolAuthority.publicKey.toString());
-    console.log('[VIBE Deploy] Initializing deployment on Devnet...');
+    console.log('[VIBE Deploy] Initializing deployment on Testnet...');
 
-    // 1.5. Request Airdrop if balance is low
+    // 1.5. Request Airdrop with robust retries
     try {
         let balance = await umi.rpc.getBalance(protocolAuthority.publicKey);
         if (balance.basisPoints === BigInt(0)) {
-            console.log('[VIBE Deploy] Balance is 0. Requesting micro-airdrop (0.05 SOL)...');
-            try {
-                await umi.rpc.airdrop(protocolAuthority.publicKey, sol(0.05));
-                console.log('[VIBE Deploy] Micro-Airdrop requested successfully.');
-                await new Promise(r => setTimeout(r, 5000)); // Wait for confirmation
-            } catch (e) {
-                console.warn('[VIBE Deploy] Micro-Airdrop failed. Faucet might be empty or throttled.');
+            console.log('[VIBE Deploy] Balance is 0. Attempting airdrop series...');
+            const airdropAmounts = [sol(0.1), sol(0.05), sol(0.01)];
+            let success = false;
+
+            for (const amount of airdropAmounts) {
+                for (let attempt = 1; attempt <= 3; attempt++) {
+                    try {
+                        console.log(`[VIBE Deploy] Requesting airdrop of ${amount.basisPoints} lamports (Attempt ${attempt})...`);
+                        const sig = await umi.rpc.airdrop(protocolAuthority.publicKey, amount);
+                        console.log('[VIBE Deploy] Airdrop signature:', sig);
+                        success = true;
+                        break;
+                    } catch (e) {
+                        const waitTime = attempt * 10000;
+                        console.warn(`[VIBE Deploy] Airdrop attempt ${attempt} failed. Waiting ${waitTime / 1000}s...`);
+                        await new Promise(r => setTimeout(r, waitTime));
+                    }
+                }
+                if (success) break;
+            }
+
+            if (!success) {
+                console.warn('[VIBE Deploy] All airdrop attempts failed. Faucet is heavily throttled.');
+                console.log('[VIBE Deploy] PRO TIP: Manually send 0.1 SOL to', protocolAuthority.publicKey.toString(), 'on Devnet.');
+            } else {
+                await new Promise(r => setTimeout(r, 15000)); // Wait for commitment
             }
         }
     } catch (airdropError) {
-        console.warn('[VIBE Deploy] Airdrop failed, but will try to proceed:', airdropError);
+        console.warn('[VIBE Deploy] Unexpected airdrop error:', airdropError);
     }
 
     try {
@@ -93,7 +112,7 @@ async function deploy() {
             BUBBLEGUM_TREE_ADDRESS: merkleTree.publicKey.toString(),
             COLLECTION_MINT: collectionMint.publicKey.toString(),
             PROTOCOL_AUTHORITY: protocolAuthority.publicKey.toString(),
-            CLUSTER: 'devnet'
+            CLUSTER: 'testnet'
         };
 
         fs.writeFileSync('vibe-protocol-config.json', JSON.stringify(config, null, 2));

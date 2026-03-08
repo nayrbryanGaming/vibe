@@ -5,7 +5,7 @@ import { publicKey, Signer, signerIdentity } from '@metaplex-foundation/umi';
 /**
  * Solana RPC Endpoint - Defaults to Devnet for the Hackathon.
  */
-const RPC_ENDPOINT = 'https://api.testnet.solana.com';
+const RPC_ENDPOINT = 'https://api.devnet.solana.com';
 
 /**
  * Returns a configured Umi instance.

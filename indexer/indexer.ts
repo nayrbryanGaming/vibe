@@ -26,6 +26,7 @@ export const startIndexer = () => {
     });
 
     console.log('VIBE Indexer: Social Graph Initialized with', globalGraph.getGlobalStats().totalUsers, 'nodes and global heatmap data.');
+    console.log('VIBE Indexer: [DEMO MODE ACTIVE] Accepting simulated on-chain signatures.');
 };
 
 export const syncOfflineConnections = async (localConnections: any[]) => {
