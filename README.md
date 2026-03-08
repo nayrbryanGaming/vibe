@@ -59,7 +59,7 @@ graph TD
 ### Deployment
 ```bash
 # Clone and Install
-git clone https://github.com/vibe/vibe-protocol.git
+git clone https://github.com/nayrbryanGaming/vibe.git
 cd vibe/mobile
 npm install --legacy-peer-deps
 

@@ -23,7 +23,7 @@ Follow these instructions to establish a production-grade development environmen
 
 ### 2.1 Repository Setup
 ```bash
-git clone https://github.com/vibe/vibe.git
+git clone https://github.com/nayrbryanGaming/vibe.git
 cd vibe/mobile
 ```
 
@@ -47,14 +47,14 @@ This ensures the Express API and Graph Indexer are ready to run concurrently.
 ## 3. Configuration
 
 ### 3.1 Network Selection
-By default, VIBE targets **Solana Devnet**. To modify the RPC endpoint, update `src/blockchain/bubblegum.ts`:
+By default, VIBE is configured for **Solana Testnet** (for final hackathon deployment). To modify the RPC endpoint, update `src/blockchain/bubblegum.ts`:
 
 ```typescript
-const RPC_ENDPOINT = 'https://api.devnet.solana.com';
+const RPC_ENDPOINT = 'https://api.testnet.solana.com';
 ```
 
 ### 3.2 Wallet Provider
-Install a Solana-compatible mobile wallet (e.g., **Phantom** or **Solflare**) on your test device to enable the Mobile Wallet Adapter (MWA) handshake.
+Install a Solana-compatible mobile wallet (e.g., **Phantom** or **Solflare**) on your test device to enable the Mobile Wallet Adapter (MWA) handshake. Ensure the wallet is set to the same network (Testnet/Devnet).
 
 ---
 
