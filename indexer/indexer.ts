@@ -10,19 +10,22 @@ import { globalGraph } from './graph';
 export const startIndexer = () => {
     console.log('VIBE Indexer: Subscribing to SOLTAG Protocol events...');
 
-    // Simulation: Population of social graph with seed data
-    const seedWallets = [
-        'vibe...alice',
-        'vibe...bob',
-        'vibe...charlie',
-        'vibe...david'
-    ];
+    // Simulation: High-density population of social graph for hackathon brilliance
+    const seedWallets = Array.from({ length: 50 }, (_, i) => `vibe...user${i}`);
 
-    globalGraph.addConnection(seedWallets[0], seedWallets[1], { timestamp: Date.now() });
-    globalGraph.addConnection(seedWallets[1], seedWallets[2], { timestamp: Date.now() });
-    globalGraph.addConnection(seedWallets[2], seedWallets[3], { timestamp: Date.now() });
+    // Generate a interconnected mesh
+    seedWallets.forEach((w, i) => {
+        const neighbors = [(i + 1) % 50, (i + 5) % 50, (i + 13) % 50];
+        neighbors.forEach(nIdx => {
+            globalGraph.addConnection(w, seedWallets[nIdx], {
+                timestamp: Date.now() - Math.random() * 86400000,
+                latitude: -6.1751 + (Math.random() - 0.5) * 2, // Distributed around Jakarta
+                longitude: 106.8272 + (Math.random() - 0.5) * 2
+            });
+        });
+    });
 
-    console.log('VIBE Indexer: Social Graph Initialized with', globalGraph.getGlobalStats().totalUsers, 'nodes.');
+    console.log('VIBE Indexer: Social Graph Initialized with', globalGraph.getGlobalStats().totalUsers, 'nodes and global heatmap data.');
 };
 
 export const syncOfflineConnections = async (localConnections: any[]) => {

@@ -23,7 +23,7 @@ import * as fs from 'fs';
  */
 
 async function deploy() {
-    const RPC_ENDPOINT = 'https://api.devnet.solana.com';
+    const RPC_ENDPOINT = 'https://api.testnet.solana.com';
     const umi = createUmi(RPC_ENDPOINT)
         .use(mplBubblegum())
         .use(mplTokenMetadata());
@@ -49,15 +49,13 @@ async function deploy() {
     try {
         let balance = await umi.rpc.getBalance(protocolAuthority.publicKey);
         if (balance.basisPoints === BigInt(0)) {
-            console.log('[VIBE Deploy] Balance is 0. Requesting multiple micro-airdrops (0.1 SOL)...');
-            for (let i = 0; i < 5; i++) {
-                try {
-                    await umi.rpc.airdrop(protocolAuthority.publicKey, sol(0.1));
-                    console.log(`[VIBE Deploy] Micro-Airdrop ${i + 1} requested.`);
-                    await new Promise(r => setTimeout(r, 5000));
-                } catch (e) {
-                    console.warn(`[VIBE Deploy] Micro-Airdrop ${i + 1} failed.`);
-                }
+            console.log('[VIBE Deploy] Balance is 0. Requesting micro-airdrop (0.05 SOL)...');
+            try {
+                await umi.rpc.airdrop(protocolAuthority.publicKey, sol(0.05));
+                console.log('[VIBE Deploy] Micro-Airdrop requested successfully.');
+                await new Promise(r => setTimeout(r, 5000)); // Wait for confirmation
+            } catch (e) {
+                console.warn('[VIBE Deploy] Micro-Airdrop failed. Faucet might be empty or throttled.');
             }
         }
     } catch (airdropError) {
