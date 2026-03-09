@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
-import { Connection, clusterApiUrl } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 
 const APP_IDENTITY = {
     name: 'VIBE',
@@ -23,10 +23,13 @@ const WalletConnect = ({ onConnect }: { onConnect: (address: string | null) => v
                 return authorizationResult;
             });
 
-            const publicKey = result.accounts[0].address;
-            setAddress(publicKey);
-            onConnect(publicKey);
-            Alert.alert('Success', `Connected to ${publicKey.slice(0, 8)}...`);
+            // MWA v2 returns Base64EncodedAddress (raw bytes in base64), NOT base58.
+            // Convert: base64 bytes → PublicKey → base58 Solana address.
+            const rawAddress = result.accounts[0].address;
+            const solanaAddress = new PublicKey(Buffer.from(rawAddress, 'base64')).toBase58();
+            setAddress(solanaAddress);
+            onConnect(solanaAddress);
+            Alert.alert('Success', `Connected to ${solanaAddress.slice(0, 8)}...`);
         } catch (error: any) {
             console.error('Wallet connection failed:', error);
             Alert.alert('Error', error?.message || 'Failed to connect wallet');

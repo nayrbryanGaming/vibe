@@ -3,7 +3,7 @@ import { mplBubblegum } from '@metaplex-foundation/mpl-bubblegum';
 import { publicKey, Signer, signerIdentity } from '@metaplex-foundation/umi';
 
 /**
- * Solana RPC Endpoint - Defaults to Devnet for the Hackathon.
+ * Solana RPC Endpoint - Devnet for the Hackathon (matches deploy-protocol.ts).
  */
 const RPC_ENDPOINT = 'https://api.devnet.solana.com';
 

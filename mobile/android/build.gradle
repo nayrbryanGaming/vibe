@@ -5,7 +5,7 @@ buildscript {
         compileSdkVersion = 34
         targetSdkVersion = 34
         ndkVersion = "25.1.8937393"
-        kotlinVersion = "1.8.10"
+        kotlinVersion = "1.9.24"
     }
     repositories {
         google()
@@ -14,11 +14,9 @@ buildscript {
     dependencies {
         classpath("com.android.tools.build:gradle:8.1.1")
         classpath("com.facebook.react:react-native-gradle-plugin")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlinVersion}")
     }
 }
-
-apply plugin: "com.facebook.react.rootproject"
 
 allprojects {
     repositories {
@@ -33,5 +31,51 @@ allprojects {
         google()
         mavenCentral()
         maven { url 'https://www.jitpack.io' }
+    }
+    // Force kotlinx-coroutines to 1.7.3 (Kotlin 1.9.x metadata) to avoid Kotlin 2.0 metadata mismatch
+    configurations.all {
+        resolutionStrategy {
+            force 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+            force 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
+            force 'org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.7.3'
+        }
+    }
+
+    // AGP 8.x compat: add namespace and enable buildConfig for old RN libraries
+    plugins.withId("com.android.library") {
+        def manifestFile = new File("${project.projectDir}/src/main/AndroidManifest.xml")
+        if (manifestFile.exists()) {
+            def ns = new groovy.xml.XmlSlurper().parse(manifestFile).@package.text()
+            if (ns) {
+                project.android.namespace = ns
+            }
+        }
+        project.android.buildFeatures.buildConfig = true
+    }
+}
+
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            project.android {
+                if (it.hasProperty('buildFeatures')) {
+                    it.buildFeatures.buildConfig = true
+                }
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_11
+                    targetCompatibility JavaVersion.VERSION_11
+                }
+            }
+        }
+        // Cap Kotlin JVM target at 11 so Kotlin 1.8.x doesn't try to use JVM 20
+        project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+            kotlinOptions.jvmTarget = '11'
+        }
+        // Fix VisionCamera: generateCodegenSchemaFromJavaScript must run after prepareHeaders
+        def generateTask = project.tasks.findByName('generateCodegenSchemaFromJavaScript')
+        def prepareTask = project.tasks.findByName('prepareHeaders')
+        if (generateTask && prepareTask) {
+            generateTask.dependsOn(prepareTask)
+        }
     }
 }

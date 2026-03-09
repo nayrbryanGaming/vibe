@@ -1,196 +1,206 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert, Animated } from 'react-native';
-import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
+﻿import React, { useState, useRef } from 'react';
+import {
+    StyleSheet, Text, View, TouchableOpacity, TextInput,
+    Animated, Alert, Dimensions, KeyboardAvoidingView, Platform,
+} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { isValidPublicKey } from '../blockchain/wallet';
 
+const { width } = Dimensions.get('window');
+
+/**
+ * Scan Screen
+ *
+ * Allows the user to connect with a peer by entering their wallet address.
+ * This is the QR fallback flow: User A shows their QR (wallet address encoded),
+ * User B either reads it visually or taps phones via NFC (handled on Home screen).
+ *
+ * For demo: paste the wallet address from the peer's ShowQR screen.
+ */
 const Scan = ({ route, navigation }: any) => {
-    const device = useCameraDevice('back');
-    const [hasScanned, setHasScanned] = useState(false);
-    const [hasPermission, setHasPermission] = React.useState(false);
-    const scanLineAnim = React.useRef(new Animated.Value(0)).current;
+    const { myAddress } = route.params ?? {};
+    const [peerAddress, setPeerAddress] = useState('');
+    const [isFocused, setIsFocused] = useState(false);
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(24)).current;
+    const borderAnim = useRef(new Animated.Value(0)).current;
 
     React.useEffect(() => {
-        (async () => {
-            const status = await Camera.requestCameraPermission();
-            setHasPermission(status === 'granted');
-        })();
-
-        // Scanner line animation
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(scanLineAnim, { toValue: 200, duration: 1500, useNativeDriver: true }),
-                Animated.timing(scanLineAnim, { toValue: 0, duration: 1500, useNativeDriver: true }),
-            ])
-        ).start();
+        Animated.parallel([
+            Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+            Animated.timing(slideAnim, { toValue: 0, duration: 700, useNativeDriver: true }),
+        ]).start();
     }, []);
 
-    const codeScanner = useCodeScanner({
-        codeTypes: ['qr'],
-        onCodeScanned: (codes) => {
-            if (hasScanned) return;
-            if (codes.length > 0 && codes[0].value) {
-                const scannedValue = codes[0].value.trim();
-                const solanaAddrRegex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    const animateBorder = (focused: boolean) => {
+        Animated.timing(borderAnim, {
+            toValue: focused ? 1 : 0,
+            duration: 200,
+            useNativeDriver: false,
+        }).start();
+        setIsFocused(focused);
+    };
 
-                if (solanaAddrRegex.test(scannedValue)) {
-                    setHasScanned(true);
-                    const { myAddress } = route.params;
-
-                    navigation.navigate('ConfirmConnection', {
-                        targetAddress: scannedValue,
-                        myAddress
-                    });
-                }
-            }
-        }
+    const borderColor = borderAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['rgba(255,255,255,0.12)', '#9945FF'],
     });
 
-    if (!hasPermission) return (
-        <View style={styles.container}>
-            <LinearGradient colors={['#0F0F0F', '#050505']} style={StyleSheet.absoluteFill} />
-            <Text style={styles.instructions}>Camera Access Required</Text>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                <Text style={styles.buttonText}>Enable in Settings</Text>
-            </TouchableOpacity>
-        </View>
-    );
-
-    if (device == null) return (
-        <View style={styles.container}>
-            <Text style={{ color: '#FFF' }}>Camera Not Found</Text>
-        </View>
-    );
+    const handleConnect = () => {
+        const trimmed = peerAddress.trim();
+        if (!trimmed) {
+            Alert.alert('Empty Address', 'Paste or type the peer wallet address from their QR code.');
+            return;
+        }
+        if (!isValidPublicKey(trimmed)) {
+            Alert.alert('Invalid Address', 'This does not look like a valid Solana wallet address (base58, 32–44 chars).');
+            return;
+        }
+        if (myAddress && trimmed === myAddress) {
+            Alert.alert('Same Wallet', 'You cannot connect with yourself.');
+            return;
+        }
+        navigation.navigate('ConfirmConnection', {
+            targetAddress: trimmed,
+            myAddress: myAddress ?? '',
+        });
+    };
 
     return (
-        <View style={styles.container}>
-            <Camera
-                style={StyleSheet.absoluteFill}
-                device={device}
-                isActive={true}
-                codeScanner={codeScanner}
-            />
+        <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+            <View style={styles.container}>
+                <LinearGradient
+                    colors={['#0D0D1A', '#050505', '#1A0A2A']}
+                    style={StyleSheet.absoluteFill}
+                />
 
-            <View style={styles.overlay}>
-                <View style={styles.scanWindow}>
-                    <View style={[styles.corner, styles.topL]} />
-                    <View style={[styles.corner, styles.topR]} />
-                    <View style={[styles.corner, styles.bottomL]} />
-                    <View style={[styles.corner, styles.bottomR]} />
+                {/* Header */}
+                <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                    <Text style={styles.backText}>← BACK</Text>
+                </TouchableOpacity>
 
-                    <Animated.View
-                        style={[
-                            styles.scanLine,
-                            { transform: [{ translateY: scanLineAnim }] }
-                        ]}
-                    />
-                </View>
+                <Animated.View
+                    style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
+                >
+                    {/* Scanner frame illustration */}
+                    <View style={styles.scanFrame}>
+                        <LinearGradient
+                            colors={['rgba(153,69,255,0.15)', 'rgba(20,241,149,0.08)']}
+                            style={styles.scanFrameInner}
+                        >
+                            <Text style={styles.scanIcon}>🔍</Text>
+                            <View style={styles.cornerTL} />
+                            <View style={styles.cornerTR} />
+                            <View style={styles.cornerBL} />
+                            <View style={styles.cornerBR} />
+                        </LinearGradient>
+                    </View>
 
-                <View style={styles.textContainer}>
                     <Text style={styles.title}>SCAN VIBE</Text>
-                    <Text style={styles.subtitle}>Hold steady to capture the signal</Text>
-                </View>
-            </View>
+                    <Text style={styles.subtitle}>SOLTAG ADDRESS INPUT</Text>
 
-            <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => navigation.goBack()}
-            >
-                <BlurView blurType="dark" style={StyleSheet.absoluteFill} />
-                <Text style={styles.closeText}>CANCEL</Text>
-            </TouchableOpacity>
-        </View>
+                    <Text style={styles.instruction}>
+                        Ask your peer to open{' '}
+                        <Text style={styles.highlight}>Show My VIBE</Text>
+                        {' '}and paste their wallet address below.
+                    </Text>
+
+                    {/* Address Input */}
+                    <Animated.View style={[styles.inputWrapper, { borderColor }]}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Paste wallet address (e.g. 9xDef…)"
+                            placeholderTextColor="#555"
+                            value={peerAddress}
+                            onChangeText={setPeerAddress}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            onFocus={() => animateBorder(true)}
+                            onBlur={() => animateBorder(false)}
+                            multiline={false}
+                        />
+                    </Animated.View>
+
+                    {/* Paste helper */}
+                    <TouchableOpacity
+                        style={styles.pasteHint}
+                        onPress={() => {
+                            // Long-press the field to paste from clipboard on Android
+                            Alert.alert(
+                                'How to paste',
+                                'Long-press the text field above and select "Paste" to insert the address copied from your peer\'s screen.',
+                            );
+                        }}
+                    >
+                        <Text style={styles.pasteHintText}>📋  How to paste?</Text>
+                    </TouchableOpacity>
+
+                    {/* Connect CTA */}
+                    <TouchableOpacity
+                        style={[styles.connectBtn, !peerAddress.trim() && styles.connectBtnDisabled]}
+                        onPress={handleConnect}
+                        activeOpacity={0.8}
+                    >
+                        <LinearGradient
+                            colors={peerAddress.trim() ? ['#9945FF', '#6D28D9'] : ['#2A2A2A', '#1A1A1A']}
+                            style={styles.connectBtnGradient}
+                        >
+                            <Text style={styles.connectBtnText}>CONNECT →</Text>
+                        </LinearGradient>
+                    </TouchableOpacity>
+
+                    <View style={styles.divider}>
+                        <View style={styles.dividerLine} />
+                        <Text style={styles.dividerText}>or use NFC tap on Home</Text>
+                        <View style={styles.dividerLine} />
+                    </View>
+                </Animated.View>
+            </View>
+        </KeyboardAvoidingView>
     );
 };
 
-// Mock BlurView for Android/Environment if missing
-const BlurView = ({ children, style }: any) => <View style={[style, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>{children}</View>;
-
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#000',
+    container: { flex: 1, backgroundColor: '#050505' },
+    backButton: { position: 'absolute', top: 52, left: 20, zIndex: 10, padding: 8 },
+    backText: { color: '#9945FF', fontWeight: '800', fontSize: 12, letterSpacing: 1.5 },
+    content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingTop: 60 },
+    scanFrame: {
+        width: 180, height: 180, borderRadius: 24, overflow: 'hidden',
+        marginBottom: 28,
+        shadowColor: '#9945FF', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.4, shadowRadius: 24,
+        elevation: 12,
     },
-    overlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.4)',
-        alignItems: 'center',
-        justifyContent: 'center',
+    scanFrameInner: {
+        flex: 1, alignItems: 'center', justifyContent: 'center',
+        borderWidth: 1, borderColor: 'rgba(153,69,255,0.3)', borderRadius: 24,
     },
-    scanWindow: {
-        width: 250,
-        height: 250,
-        position: 'relative',
+    scanIcon: { fontSize: 56 },
+    cornerTL: { position: 'absolute', top: 12, left: 12, width: 22, height: 22, borderTopWidth: 3, borderLeftWidth: 3, borderColor: '#9945FF', borderTopLeftRadius: 6 },
+    cornerTR: { position: 'absolute', top: 12, right: 12, width: 22, height: 22, borderTopWidth: 3, borderRightWidth: 3, borderColor: '#9945FF', borderTopRightRadius: 6 },
+    cornerBL: { position: 'absolute', bottom: 12, left: 12, width: 22, height: 22, borderBottomWidth: 3, borderLeftWidth: 3, borderColor: '#14F195', borderBottomLeftRadius: 6 },
+    cornerBR: { position: 'absolute', bottom: 12, right: 12, width: 22, height: 22, borderBottomWidth: 3, borderRightWidth: 3, borderColor: '#14F195', borderBottomRightRadius: 6 },
+    title: { fontSize: 28, fontWeight: '900', color: '#FFF', letterSpacing: 6, marginBottom: 4 },
+    subtitle: { fontSize: 10, color: '#9945FF', fontWeight: '700', letterSpacing: 2, marginBottom: 24 },
+    instruction: { fontSize: 14, color: '#94A3B8', textAlign: 'center', lineHeight: 22, marginBottom: 24, maxWidth: 300 },
+    highlight: { color: '#14F195', fontWeight: '700' },
+    inputWrapper: {
+        width: '100%', borderRadius: 16, borderWidth: 1.5,
+        backgroundColor: 'rgba(255,255,255,0.04)', overflow: 'hidden', marginBottom: 12,
     },
-    corner: {
-        position: 'absolute',
-        width: 30,
-        height: 30,
-        borderColor: '#9945FF',
-        borderWidth: 4,
-    },
-    topL: { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 20 },
-    topR: { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0, borderTopRightRadius: 20 },
-    bottomL: { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0, borderBottomLeftRadius: 20 },
-    bottomR: { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0, borderBottomRightRadius: 20 },
-    scanLine: {
-        width: '100%',
-        height: 2,
-        backgroundColor: '#14F195',
-        shadowColor: '#14F195',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 1,
-        shadowRadius: 10,
-    },
-    textContainer: {
-        marginTop: 60,
-        alignItems: 'center',
-    },
-    title: {
-        color: '#FFF',
-        fontSize: 24,
-        fontWeight: '900',
-        letterSpacing: 4,
-    },
-    subtitle: {
-        color: '#AAA',
-        marginTop: 8,
-        fontSize: 14,
-    },
-    closeButton: {
-        position: 'absolute',
-        bottom: 50,
-        alignSelf: 'center',
-        paddingHorizontal: 40,
-        paddingVertical: 16,
-        borderRadius: 30,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
-    },
-    closeText: {
-        color: '#FFF',
-        fontWeight: '900',
-        letterSpacing: 2,
-        fontSize: 12,
-    },
-    instructions: {
-        color: '#FFF',
-        fontSize: 18,
-        fontWeight: 'bold',
-        textAlign: 'center',
-        marginTop: 100,
-    },
-    backButton: {
-        marginTop: 20,
-        padding: 15,
-        backgroundColor: '#1A1A1A',
-        borderRadius: 10,
-        alignSelf: 'center',
-    },
-    buttonText: {
-        color: '#9945FF',
-        fontWeight: 'bold',
-    }
+    input: { color: '#F1F5F9', fontSize: 14, paddingVertical: 16, paddingHorizontal: 18, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
+    pasteHint: { alignSelf: 'flex-start', marginBottom: 28 },
+    pasteHintText: { color: '#475569', fontSize: 12 },
+    connectBtn: { width: '100%', borderRadius: 16, overflow: 'hidden', marginBottom: 28 },
+    connectBtnDisabled: { opacity: 0.5 },
+    connectBtnGradient: { paddingVertical: 18, alignItems: 'center', justifyContent: 'center' },
+    connectBtnText: { color: '#FFF', fontWeight: '900', fontSize: 15, letterSpacing: 2 },
+    divider: { flexDirection: 'row', alignItems: 'center', width: '100%', gap: 10 },
+    dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.07)' },
+    dividerText: { color: '#475569', fontSize: 12 },
 });
 
 export default Scan;

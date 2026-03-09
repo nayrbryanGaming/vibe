@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIBE — SOLTAG Protocol on Solana</title>
+    <meta name="description" content="Turn every handshake into a blockchain moment. NFC-powered Proof-of-Connection permanently recorded on Solana.">
+    <meta property="og:title" content="VIBE — SOLTAG Protocol">
+    <meta property="og:description" content="NFC-powered Proof-of-Connection on Solana. Download the Android app and start building your on-chain social graph.">
+    <meta property="og:type" content="website">
+    <style>
+        :root {
+            --sol-purple: #9945FF;
+            --sol-green:  #14F195;
+            --bg:         #050508;
+            --surface:    rgba(255,255,255,0.04);
+            --border:     rgba(255,255,255,0.08);
+            --text:       #e2e8f0;
+            --muted:      #64748b;
+        }
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        html { scroll-behavior:smooth; }
+        body {
+            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+            background:var(--bg);
+            color:var(--text);
+            overflow-x:hidden;
+            line-height:1.6;
+        }
+
+        /* ── Animated background orbs ── */
+        .bg-orbs { position:fixed; inset:0; z-index:-1; pointer-events:none; }
+        .bg-orbs::before {
+            content:''; position:absolute; top:-25%; left:-15%;
+            width:55%; height:55%;
+            background:radial-gradient(circle,rgba(153,69,255,.18) 0%,transparent 70%);
+            animation:orb1 22s ease-in-out infinite;
+        }
+        .bg-orbs::after {
+            content:''; position:absolute; bottom:-20%; right:-10%;
+            width:50%; height:50%;
+            background:radial-gradient(circle,rgba(20,241,149,.12) 0%,transparent 70%);
+            animation:orb2 28s ease-in-out infinite;
+        }
+        @keyframes orb1 { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(4%,7%) scale(1.08)} 66%{transform:translate(-3%,-4%) scale(.94)} }
+        @keyframes orb2 { 0%,100%{transform:translate(0,0) scale(1)} 40%{transform:translate(-5%,4%) scale(1.06)} 70%{transform:translate(3%,-6%) scale(.93)} }
+
+        /* ── Nav ── */
+        nav {
+            position:fixed; top:0; left:0; right:0; z-index:100;
+            display:flex; align-items:center; justify-content:space-between;
+            padding:.9rem 6%;
+            background:rgba(5,5,8,.85);
+            backdrop-filter:blur(24px);
+            border-bottom:1px solid var(--border);
+        }
+        .nav-logo {
+            font-size:1.6rem; font-weight:900; letter-spacing:-.05em;
+            background:linear-gradient(135deg,var(--sol-purple),var(--sol-green));
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+        }
+        .nav-dl {
+            display:inline-flex; align-items:center; gap:.45rem;
+            background:linear-gradient(135deg,var(--sol-green),#0ea5e9);
+            color:#050508; text-decoration:none;
+            padding:.5rem 1.3rem; border-radius:9px;
+            font-size:.875rem; font-weight:700;
+            transition:opacity .2s,transform .2s;
+            box-shadow:0 0 22px rgba(20,241,149,.25);
+        }
+        .nav-dl:hover { opacity:.88; transform:translateY(-1px); }
+        .nav-dl svg { width:15px; height:15px; flex-shrink:0; }
+
+        /* ── Hero ── */
+        .hero {
+            min-height:100vh; display:flex; flex-direction:column;
+            align-items:center; justify-content:center;
+            text-align:center; padding:7rem 6% 5rem;
+        }
+        .hero-badge {
+            display:inline-flex; align-items:center; gap:.5rem;
+            background:rgba(153,69,255,.12);
+            border:1px solid rgba(153,69,255,.3);
+            color:#c084fc; font-size:.75rem; font-weight:700;
+            letter-spacing:.1em; text-transform:uppercase;
+            padding:.4rem 1.1rem; border-radius:100px;
+            margin-bottom:1.75rem;
+        }
+        .hero-badge-dot {
+            width:7px; height:7px; border-radius:50%;
+            background:var(--sol-green);
+            animation:blink 2s ease-in-out infinite;
+        }
+        @keyframes blink { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.5)} }
+
+        .hero-title {
+            font-size:clamp(5rem,16vw,10rem);
+            font-weight:900; line-height:.9; letter-spacing:-.05em;
+            background:linear-gradient(140deg,#fff 0%,var(--sol-purple) 45%,var(--sol-green) 100%);
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+            margin-bottom:.6rem;
+        }
+        .hero-sub {
+            font-size:clamp(.9rem,2.5vw,1.25rem); font-weight:700;
+            color:#64748b; letter-spacing:.22em; text-transform:uppercase;
+            margin-bottom:1.5rem;
+        }
+        .hero-tagline {
+            font-size:clamp(1rem,2.2vw,1.25rem); color:#cbd5e1;
+            max-width:580px; line-height:1.7; margin-bottom:2.75rem;
+        }
+        .hero-tagline strong { color:#fff; }
+
+        .hero-btns { display:flex; gap:1rem; flex-wrap:wrap; justify-content:center; margin-bottom:3.5rem; }
+
+        .btn-primary {
+            display:inline-flex; align-items:center; gap:.55rem;
+            background:linear-gradient(135deg,var(--sol-green),#0ea5e9);
+            color:#050508; text-decoration:none;
+            padding:.95rem 2.1rem; border-radius:13px;
+            font-size:1.05rem; font-weight:700;
+            box-shadow:0 0 45px rgba(20,241,149,.32),0 4px 20px rgba(0,0,0,.4);
+            transition:transform .25s,box-shadow .25s;
+        }
+        .btn-primary:hover { transform:translateY(-3px); box-shadow:0 0 65px rgba(20,241,149,.48),0 8px 32px rgba(0,0,0,.5); }
+        .btn-primary svg { width:21px; height:21px; }
+
+        .btn-ghost {
+            display:inline-flex; align-items:center; gap:.55rem;
+            background:var(--surface); border:1px solid var(--border);
+            color:var(--text); text-decoration:none;
+            padding:.95rem 2.1rem; border-radius:13px;
+            font-size:1.05rem; font-weight:600;
+            backdrop-filter:blur(12px);
+            transition:background .2s,border-color .2s,transform .2s;
+        }
+        .btn-ghost:hover { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.18); transform:translateY(-3px); }
+        .btn-ghost svg { width:18px; height:18px; opacity:.7; }
+
+        /* ── Network SVG ── */
+        .network-wrap { width:100%; max-width:760px; margin:0 auto; }
+        .network-wrap svg { display:block; }
+
+        /* ── Stats bar ── */
+        .statsbar {
+            display:flex; justify-content:center; gap:3.5rem; flex-wrap:wrap;
+            padding:2rem 6%;
+            background:rgba(255,255,255,.015);
+            border-top:1px solid var(--border); border-bottom:1px solid var(--border);
+        }
+        .stat { text-align:center; }
+        .stat-val {
+            font-size:1.8rem; font-weight:800; letter-spacing:-.03em;
+            background:linear-gradient(135deg,var(--sol-purple),var(--sol-green));
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+        }
+        .stat-lbl { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-top:.2rem; }
+
+        /* ── Sections ── */
+        .section { padding:6rem 6%; max-width:1200px; margin:0 auto; }
+        .section-label { font-size:.72rem; font-weight:700; letter-spacing:.15em; text-transform:uppercase; color:var(--sol-green); margin-bottom:.9rem; }
+        .section-title { font-size:clamp(1.75rem,4vw,2.75rem); font-weight:800; line-height:1.18; letter-spacing:-.025em; margin-bottom:.9rem; }
+        .section-desc { font-size:1.02rem; color:#94a3b8; max-width:560px; line-height:1.75; margin-bottom:3rem; }
+
+        /* ── Feature cards ── */
+        .grid-4 { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1.2rem; }
+        .card {
+            background:var(--surface); border:1px solid var(--border);
+            border-radius:18px; padding:1.8rem;
+            transition:border-color .3s,transform .3s;
+            position:relative; overflow:hidden;
+        }
+        .card::after {
+            content:''; position:absolute; inset:0; border-radius:18px;
+            background:linear-gradient(135deg,var(--sol-purple),var(--sol-green));
+            opacity:0; transition:opacity .3s;
+        }
+        .card:hover { border-color:rgba(153,69,255,.45); transform:translateY(-5px); }
+        .card:hover::after { opacity:.05; }
+        .card-icon { font-size:2.1rem; margin-bottom:1.2rem; display:block; position:relative; z-index:1; }
+        .card-title { font-size:1.02rem; font-weight:700; color:#f1f5f9; margin-bottom:.5rem; position:relative; z-index:1; }
+        .card-desc { font-size:.875rem; color:var(--muted); line-height:1.7; position:relative; z-index:1; }
+
+        /* ── Steps ── */
+        .grid-3 { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:2.5rem; }
+        .step { text-align:center; }
+        .step-num {
+            display:inline-flex; align-items:center; justify-content:center;
+            width:62px; height:62px; border-radius:50%;
+            background:linear-gradient(135deg,var(--sol-purple),#7c3aed);
+            font-size:1.6rem; font-weight:900; color:#fff;
+            margin:0 auto 1.4rem;
+            box-shadow:0 0 32px rgba(153,69,255,.4);
+        }
+        .step-title { font-size:1rem; font-weight:700; color:#f1f5f9; margin-bottom:.5rem; }
+        .step-desc { font-size:.875rem; color:var(--muted); line-height:1.65; }
+
+        /* ── Download CTA box ── */
+        .dl-box {
+            background:linear-gradient(135deg,rgba(153,69,255,.1),rgba(20,241,149,.07));
+            border:1px solid rgba(153,69,255,.22);
+            border-radius:24px; padding:3.5rem 2.5rem;
+            text-align:center; max-width:700px; margin:0 auto;
+        }
+        .dl-box h2 { font-size:clamp(1.5rem,4vw,2.2rem); font-weight:800; margin-bottom:.75rem; }
+        .dl-box p { color:#94a3b8; font-size:1rem; line-height:1.7; margin-bottom:2rem; }
+        .dl-box strong { color:#e2e8f0; }
+        .reqs { display:flex; gap:.75rem; justify-content:center; flex-wrap:wrap; margin-top:1.5rem; }
+        .req {
+            display:inline-flex; align-items:center; gap:.4rem;
+            background:rgba(255,255,255,.06); border:1px solid var(--border);
+            color:#94a3b8; font-size:.78rem; font-weight:500;
+            padding:.35rem .9rem; border-radius:100px;
+        }
+
+        /* ── Install guide ── */
+        .install-steps { display:flex; flex-direction:column; gap:.6rem; margin:1.5rem 0; text-align:left; }
+        .install-step {
+            display:flex; align-items:flex-start; gap:.85rem;
+            background:rgba(255,255,255,.03); border:1px solid var(--border);
+            border-radius:12px; padding:.85rem 1.1rem;
+        }
+        .install-step-num {
+            min-width:28px; height:28px; border-radius:50%;
+            background:linear-gradient(135deg,var(--sol-green),#0ea5e9);
+            color:#050508; font-size:.75rem; font-weight:800;
+            display:flex; align-items:center; justify-content:center; flex-shrink:0;
+        }
+        .install-step-text { font-size:.875rem; color:#cbd5e1; line-height:1.5; }
+        .install-step-text strong { color:#fff; }
+
+        /* ── Tech stack ── */
+        .tech-wrap { display:flex; flex-wrap:wrap; gap:.7rem; justify-content:center; }
+        .tech {
+            display:inline-flex; align-items:center; gap:.45rem;
+            background:var(--surface); border:1px solid var(--border);
+            padding:.45rem 1.1rem; border-radius:8px;
+            font-size:.825rem; font-weight:500; color:#cbd5e1;
+        }
+
+        /* ── API preview ── */
+        .api-pre {
+            background:rgba(0,0,0,.5); border:1px solid var(--border);
+            border-radius:14px; padding:1.5rem;
+            font-family:'Fira Code','Cascadia Code',monospace;
+            font-size:.78rem; color:#a8b3cf; line-height:1.7;
+            overflow-x:auto;
+        }
+        .api-pre .g { color:var(--sol-green); }
+        .api-pre .p { color:var(--sol-purple); }
+        .api-pre .w { color:#fff; }
+
+        /* ── Footer ── */
+        footer {
+            border-top:1px solid var(--border);
+            padding:2rem 6%; text-align:center;
+            color:var(--muted); font-size:.85rem;
+        }
+        footer a { color:var(--sol-green); text-decoration:none; }
+        footer a:hover { text-decoration:underline; }
+        .footer-logo {
+            font-size:1.25rem; font-weight:900; letter-spacing:-.04em;
+            background:linear-gradient(135deg,var(--sol-purple),var(--sol-green));
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+            margin-bottom:.5rem;
+        }
+
+        /* ── Responsive ── */
+        @media(max-width:640px) {
+            .hero-btns { flex-direction:column; align-items:center; }
+            .statsbar { gap:1.75rem; }
+            .dl-box { padding:2rem 1.25rem; }
+            nav { padding:.8rem 4%; }
+            .section { padding:4rem 5%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="bg-orbs"></div>
+
+<!-- ────────────────────────── NAV ────────────────────────── -->
+<nav>
+    <span class="nav-logo">VIBE</span>
+    <a href="/download" class="nav-dl">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 3a1 1 0 00-1 1v7.586L6.707 9.293a1 1 0 10-1.414 1.414l4 4a1 1 0 001.414 0l4-4a1 1 0 00-1.414-1.414L11 11.586V4a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            <path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/>
+        </svg>
+        Download APK
+    </a>
+</nav>
+
+<!-- ────────────────────────── HERO ────────────────────────── -->
+<div class="hero">
+    <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        Live on Solana Devnet
+    </div>
+
+    <h1 class="hero-title">VIBE</h1>
+    <p class="hero-sub">SOLTAG Protocol</p>
+    <p class="hero-tagline">
+        Turn every handshake into a <strong>blockchain moment</strong>.<br>
+        NFC-powered Proof-of-Connection, permanently recorded on Solana.
+    </p>
+
+    <div class="hero-btns">
+        <a href="/download" class="btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path fill-rule="evenodd" d="M12 3a1 1 0 00-1 1v9.586l-2.293-2.293a1 1 0 10-1.414 1.414l4 4a1 1 0 001.414 0l4-4a1 1 0 00-1.414-1.414L13 13.586V4a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                <path d="M4 19a1 1 0 011-1h14a1 1 0 110 2H5a1 1 0 01-1-1z"/>
+            </svg>
+            Download APK
+        </a>
+        <a href="/api/health" target="_blank" class="btn-ghost">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+            Live API Health
+        </a>
+    </div>
+
+    <!-- Animated network graph illustration -->
+    <div class="network-wrap">
+        <svg viewBox="0 0 760 180" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:.3">
+            <defs>
+                <linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#9945FF"/>
+                    <stop offset="100%" stop-color="#14F195"/>
+                </linearGradient>
+            </defs>
+            <line x1="380" y1="90" x2="220" y2="50"  stroke="url(#lg1)" stroke-width="1.5"/>
+            <line x1="380" y1="90" x2="170" y2="130" stroke="url(#lg1)" stroke-width="1.5"/>
+            <line x1="380" y1="90" x2="540" y2="45"  stroke="url(#lg1)" stroke-width="1.5"/>
+            <line x1="380" y1="90" x2="560" y2="145" stroke="url(#lg1)" stroke-width="1.5"/>
+            <line x1="380" y1="90" x2="640" y2="90"  stroke="url(#lg1)" stroke-width="1.5"/>
+            <line x1="220" y1="50" x2="170" y2="130" stroke="url(#lg1)" stroke-width="1" opacity=".45"/>
+            <line x1="540" y1="45" x2="560" y2="145" stroke="url(#lg1)" stroke-width="1" opacity=".45"/>
+            <line x1="220" y1="50" x2="80"  y2="68"  stroke="url(#lg1)" stroke-width="1" opacity=".35"/>
+            <line x1="170" y1="130" x2="65" y2="160" stroke="url(#lg1)" stroke-width="1" opacity=".3"/>
+            <line x1="640" y1="90" x2="710" y2="45"  stroke="url(#lg1)" stroke-width="1" opacity=".3"/>
+            <line x1="640" y1="90" x2="720" y2="140" stroke="url(#lg1)" stroke-width="1" opacity=".25"/>
+            <circle cx="380" cy="90"  r="9"  fill="#9945FF" opacity=".95"/>
+            <circle cx="380" cy="90"  r="18" fill="#9945FF" opacity=".12"/>
+            <circle cx="220" cy="50"  r="6"  fill="#14F195" opacity=".9"/>
+            <circle cx="170" cy="130" r="5"  fill="#14F195" opacity=".75"/>
+            <circle cx="540" cy="45"  r="6"  fill="#9945FF" opacity=".8"/>
+            <circle cx="560" cy="145" r="5"  fill="#14F195" opacity=".7"/>
+            <circle cx="640" cy="90"  r="5"  fill="#9945FF" opacity=".7"/>
+            <circle cx="80"  cy="68"  r="4"  fill="#14F195" opacity=".55"/>
+            <circle cx="65"  cy="160" r="3.5" fill="#9945FF" opacity=".45"/>
+            <circle cx="710" cy="45"  r="3.5" fill="#14F195" opacity=".45"/>
+            <circle cx="720" cy="140" r="3"   fill="#9945FF" opacity=".35"/>
+        </svg>
+    </div>
+</div>
+
+<!-- ────────────────────────── STATS ────────────────────────── -->
+<div class="statsbar">
+    <div class="stat"><div class="stat-val">65,000+</div><div class="stat-lbl">TPS on Solana</div></div>
+    <div class="stat"><div class="stat-val">~$0.0005</div><div class="stat-lbl">Per Connection</div></div>
+    <div class="stat"><div class="stat-val">&lt;400ms</div><div class="stat-lbl">Finality</div></div>
+    <div class="stat"><div class="stat-val">cNFT</div><div class="stat-lbl">Compressed NFT</div></div>
+    <div class="stat"><div class="stat-val">NFC</div><div class="stat-lbl">Tap-to-Connect</div></div>
+</div>
+
+<!-- ────────────────────────── FEATURES ────────────────────────── -->
+<div class="section" id="features">
+    <p class="section-label">Why VIBE</p>
+    <h2 class="section-title">Real-world connections,<br>permanent on-chain records</h2>
+    <p class="section-desc">VIBE reimagines social networking by anchoring real-life interactions to the Solana blockchain — no servers, no middlemen, no data leaks.</p>
+    <div class="grid-4">
+        <div class="card">
+            <span class="card-icon">📡</span>
+            <div class="card-title">NFC Tap-to-Connect</div>
+            <p class="card-desc">Simply tap phones. A Proof-of-Connection NFT is created on Solana, recording the moment you met — timestamped and GPS-tagged forever.</p>
+        </div>
+        <div class="card">
+            <span class="card-icon">⛓️</span>
+            <div class="card-title">Solana cNFT</div>
+            <p class="card-desc">Connections are minted as Compressed NFTs via Metaplex Bubblegum — 1000× cheaper than standard NFTs, permanently on-chain with full ownership.</p>
+        </div>
+        <div class="card">
+            <span class="card-icon">🌐</span>
+            <div class="card-title">Social Graph Engine</div>
+            <p class="card-desc">Real-time BFS traversal shows degrees of separation from anyone in the network. Live global heatmap of all connections worldwide.</p>
+        </div>
+        <div class="card">
+            <span class="card-icon">🔐</span>
+            <div class="card-title">Self-Custody Identity</div>
+            <p class="card-desc">No sign-up, no email, no password. Your identity is your Solana wallet. You own your connection graph — always and forever.</p>
+        </div>
+        <div class="card">
+            <span class="card-icon">📴</span>
+            <div class="card-title">Offline-First</div>
+            <p class="card-desc">Record connections even without internet. VIBE queues them locally and syncs to Solana automatically when back online.</p>
+        </div>
+        <div class="card">
+            <span class="card-icon">🗺️</span>
+            <div class="card-title">Connection Map</div>
+            <p class="card-desc">Every PoC stores GPS coordinates on-chain, building a global social heatmap. See exactly where your network meets the world.</p>
+        </div>
+    </div>
+</div>
+
+<!-- ────────────────────────── HOW IT WORKS ────────────────────────── -->
+<div class="section" id="how" style="padding-top:0; text-align:center">
+    <p class="section-label" style="text-align:center">How It Works</p>
+    <h2 class="section-title" style="text-align:center;margin:0 auto .9rem">Three taps.<br>Permanently on-chain.</h2>
+    <p class="section-desc" style="margin:0 auto 3.5rem">No apps to follow, no posts to curate. Just real humans, meeting in real life — recorded on an immutable ledger.</p>
+    <div class="grid-3">
+        <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-title">Open &amp; Connect Wallet</div>
+            <p class="step-desc">Launch VIBE and connect your Solana wallet. No account creation, no KYC. Your keypair is your identity — sovereign and portable.</p>
+        </div>
+        <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-title">NFC Tap</div>
+            <p class="step-desc">Hold your phone near someone else's. VIBE exchanges wallet addresses over NFC and initiates a mutual Proof-of-Connection transaction.</p>
+        </div>
+        <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-title">Connection Minted</div>
+            <p class="step-desc">A cNFT is minted on Solana with your timestamp, GPS location, and both wallet addresses. Immutable. Verifiable. Yours forever.</p>
+        </div>
+    </div>
+</div>
+
+<!-- ────────────────────────── API PREVIEW ────────────────────────── -->
+<div class="section" style="padding-top:0">
+    <p class="section-label">Live API</p>
+    <h2 class="section-title">Open social graph,<br>accessible to everyone</h2>
+    <p class="section-desc">The VIBE backend exposes a public REST API. Query any wallet's connection graph, check degrees of separation, or pull heatmap coordinates.</p>
+    <div class="api-pre">
+<span class="g">GET</span> <span class="w">/api/health</span><br>
+<span style="color:#475569">→</span> { <span class="g">"status"</span>: <span class="p">"ok"</span>, <span class="g">"protocol"</span>: <span class="p">"SOLTAG v1.0"</span>, <span class="g">"graph"</span>: { <span class="g">"totalUsers"</span>: <span class="w">50</span>, <span class="g">"totalConnections"</span>: <span class="w">150</span> } }<br>
+<br>
+<span class="g">GET</span> <span class="w">/api/connections/:wallet</span><br>
+<span style="color:#475569">→</span> { <span class="g">"wallet"</span>: <span class="p">"9xDef…"</span>, <span class="g">"connections"</span>: [<span class="p">"Fg3W…"</span>, <span class="p">"HnZa…"</span>], <span class="g">"count"</span>: <span class="w">3</span> }<br>
+<br>
+<span class="g">GET</span> <span class="w">/api/separation/:walletA/:walletB</span><br>
+<span style="color:#475569">→</span> { <span class="g">"degrees"</span>: <span class="w">2</span> }<br>
+<br>
+<span class="g">GET</span> <span class="w">/api/heatmap</span><br>
+<span style="color:#475569">→</span> { <span class="g">"dots"</span>: [{ <span class="g">"latitude"</span>: <span class="w">-6.175</span>, <span class="g">"longitude"</span>: <span class="w">106.827</span>, … }] }<br>
+<br>
+<span class="g">POST</span> <span class="w">/api/connections</span>  <span style="color:#475569">{ walletA, walletB, latitude, longitude, signature }</span><br>
+<span style="color:#475569">→</span> { <span class="g">"success"</span>: <span class="w">true</span> }
+    </div>
+</div>
+
+<!-- ────────────────────────── DOWNLOAD CTA ────────────────────────── -->
+<div class="section" id="download" style="padding-top:0">
+    <div class="dl-box">
+        <div style="font-size:3.5rem;margin-bottom:1rem">📱</div>
+        <h2>Download VIBE</h2>
+        <p>
+            Available for Android. Install the APK directly — no Play Store required.<br>
+            Android considers this a <strong>sideload</strong>; follow the steps below to install.
+        </p>
+
+        <a href="/download" class="btn-primary" style="font-size:1.1rem;padding:1rem 2.5rem;display:inline-flex;margin-bottom:1rem">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style="width:22px;height:22px">
+                <path fill-rule="evenodd" d="M12 3a1 1 0 00-1 1v9.586l-2.293-2.293a1 1 0 10-1.414 1.414l4 4a1 1 0 001.414 0l4-4a1 1 0 00-1.414-1.414L13 13.586V4a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                <path d="M4 19a1 1 0 011-1h14a1 1 0 110 2H5a1 1 0 01-1-1z"/>
+            </svg>
+            Download APK (Android)
+        </a>
+
+        <div class="install-steps">
+            <div class="install-step">
+                <div class="install-step-num">1</div>
+                <div class="install-step-text">Tap the button above to download <strong>VIBE-SOLTAG.apk</strong> to your Android device.</div>
+            </div>
+            <div class="install-step">
+                <div class="install-step-num">2</div>
+                <div class="install-step-text">Open <strong>Settings → Security</strong> (or <strong>Privacy</strong>) → enable <strong>"Install unknown apps"</strong> for your browser or Files app.</div>
+            </div>
+            <div class="install-step">
+                <div class="install-step-num">3</div>
+                <div class="install-step-text">Open the downloaded APK file and tap <strong>Install</strong>. Launch VIBE and connect your Solana wallet to get started.</div>
+            </div>
+        </div>
+
+        <div class="reqs">
+            <span class="req">📱 Android 8.0+</span>
+            <span class="req">📡 NFC Required</span>
+            <span class="req">~150 MB</span>
+            <span class="req">🆓 Free</span>
+        </div>
+    </div>
+</div>
+
+<!-- ────────────────────────── TECH STACK ────────────────────────── -->
+<div class="section" style="padding-top:2rem;padding-bottom:5rem;text-align:center">
+    <p class="section-label" style="text-align:center">Built With</p>
+    <div class="tech-wrap">
+        <span class="tech">⛓️ Solana</span>
+        <span class="tech">🎭 Metaplex Bubblegum</span>
+        <span class="tech">📱 React Native 0.72</span>
+        <span class="tech">🔷 TypeScript</span>
+        <span class="tech">🐘 PostgreSQL</span>
+        <span class="tech">🚀 Vercel</span>
+        <span class="tech">🌿 Express.js</span>
+        <span class="tech">📡 Android NFC HCE</span>
+    </div>
+</div>
+
+<!-- ────────────────────────── FOOTER ────────────────────────── -->
+<footer>
+    <div class="footer-logo">VIBE</div>
+    <p>
+        SOLTAG Protocol &nbsp;·&nbsp;
+        <a href="/api/health" target="_blank">API Health</a> &nbsp;·&nbsp;
+        <a href="/api/stats" target="_blank">Graph Stats</a> &nbsp;·&nbsp;
+        Built on <a href="https://solana.com" target="_blank" rel="noopener">Solana</a>
+    </p>
+</footer>
+
+</body>
+</html>

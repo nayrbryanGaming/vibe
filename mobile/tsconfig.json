@@ -1,12 +1,30 @@
 {
-  "extends": "@tsconfig/react-native/tsconfig.json",
   "compilerOptions": {
-    "types": [
-      "jest"
+    "target": "esnext",
+    "module": "commonjs",
+    "types": ["react-native", "jest"],
+    "lib": [
+      "ES2019",
+      "ES2020",
+      "ES2021.Promise",
+      "ES2021.String",
+      "ES2021.WeakRef",
+      "ES2022.Array",
+      "ES2022.Object",
+      "ES2022.String"
     ],
+    "allowJs": true,
     "jsx": "react-native",
+    "noEmit": true,
+    "isolatedModules": true,
+    "strict": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "ignoreDeprecations": "6.0"
   },
   "include": [
     "**/*.ts",

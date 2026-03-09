@@ -17,22 +17,34 @@ import {
 } from '@metaplex-foundation/umi';
 import { Keypair as Web3Keypair } from '@solana/web3.js';
 import * as fs from 'fs';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 /**
  * VIBE Protocol Deployment Script
  */
 
 async function deploy() {
+    console.log('[VIBE Deploy] Starting deployment script...');
     const RPC_ENDPOINT = 'https://api.devnet.solana.com';
     const umi = createUmi(RPC_ENDPOINT)
         .use(mplBubblegum())
         .use(mplTokenMetadata());
 
-    // 1. Setup Signer using provided Private Key
-    // User provided a 32-byte hex seed
-    const hexSeed = '3ed7524b66da7ebedb2618692bdbf46ca3342b0aa931a1f79f7758ab651ecb41';
+    console.log('[VIBE Deploy] RPC Endpoint:', RPC_ENDPOINT);
+
+    // 1. Setup Signer — reads secret from environment variable (never hardcoded)
+    const hexSeed = process.env.DEPLOY_AUTHORITY_HEX_SEED;
+    if (!hexSeed || !/^[0-9a-fA-F]{64}$/.test(hexSeed)) {
+        throw new Error(
+            '[VIBE Deploy] DEPLOY_AUTHORITY_HEX_SEED is missing or invalid.\n' +
+            'Create a .env file at the project root with:\n' +
+            '  DEPLOY_AUTHORITY_HEX_SEED=<your 32-byte hex seed>'
+        );
+    }
     const seed = Uint8Array.from(Buffer.from(hexSeed, 'hex'));
 
+    console.log('[VIBE Deploy] Deriving keypair...');
     // Derive Keypair from seed
     const web3Keypair = Web3Keypair.fromSeed(seed);
     const protocolAuthority = createSignerFromKeypair(umi, {
@@ -43,42 +55,26 @@ async function deploy() {
     umi.use(keypairIdentity(protocolAuthority));
 
     console.log('[VIBE Deploy] Protocol Authority:', protocolAuthority.publicKey.toString());
-    console.log('[VIBE Deploy] Initializing deployment on Testnet...');
+    console.log('[VIBE Deploy] Initializing deployment on DEVNET...');
 
-    // 1.5. Request Airdrop with robust retries
+    // 1.5. Check balance and notify
     try {
         let balance = await umi.rpc.getBalance(protocolAuthority.publicKey);
-        if (balance.basisPoints === BigInt(0)) {
-            console.log('[VIBE Deploy] Balance is 0. Attempting airdrop series...');
-            const airdropAmounts = [sol(0.1), sol(0.05), sol(0.01)];
-            let success = false;
+        console.log(`[VIBE Deploy] Current Balance: ${balance.basisPoints} lamports`);
 
-            for (const amount of airdropAmounts) {
-                for (let attempt = 1; attempt <= 3; attempt++) {
-                    try {
-                        console.log(`[VIBE Deploy] Requesting airdrop of ${amount.basisPoints} lamports (Attempt ${attempt})...`);
-                        const sig = await umi.rpc.airdrop(protocolAuthority.publicKey, amount);
-                        console.log('[VIBE Deploy] Airdrop signature:', sig);
-                        success = true;
-                        break;
-                    } catch (e) {
-                        const waitTime = attempt * 10000;
-                        console.warn(`[VIBE Deploy] Airdrop attempt ${attempt} failed. Waiting ${waitTime / 1000}s...`);
-                        await new Promise(r => setTimeout(r, waitTime));
-                    }
-                }
-                if (success) break;
-            }
-
-            if (!success) {
-                console.warn('[VIBE Deploy] All airdrop attempts failed. Faucet is heavily throttled.');
-                console.log('[VIBE Deploy] PRO TIP: Manually send 0.1 SOL to', protocolAuthority.publicKey.toString(), 'on Devnet.');
-            } else {
-                await new Promise(r => setTimeout(r, 15000)); // Wait for commitment
+        if (balance.basisPoints < BigInt(50000000)) {
+            console.log('[VIBE Deploy] Low balance. Attempting airdrop as fallback...');
+            try {
+                await umi.rpc.airdrop(protocolAuthority.publicKey, sol(1));
+                console.log('[VIBE Deploy] Airdrop requested.');
+                await new Promise(r => setTimeout(r, 10000));
+                balance = await umi.rpc.getBalance(protocolAuthority.publicKey);
+            } catch (e) {
+                console.warn('[VIBE Deploy] Airdrop failed. Using existing balance.');
             }
         }
-    } catch (airdropError) {
-        console.warn('[VIBE Deploy] Unexpected airdrop error:', airdropError);
+    } catch (e) {
+        console.warn('[VIBE Deploy] Balance check error:', e);
     }
 
     try {
@@ -103,7 +99,7 @@ async function deploy() {
             merkleTree,
             maxDepth: 14,
             maxBufferSize: 64,
-            public: true, // Allow anyone to mint (constrained by our app logic)
+            public: true,
         });
         await treeBuilder.sendAndConfirm(umi);
 
@@ -112,7 +108,7 @@ async function deploy() {
             BUBBLEGUM_TREE_ADDRESS: merkleTree.publicKey.toString(),
             COLLECTION_MINT: collectionMint.publicKey.toString(),
             PROTOCOL_AUTHORITY: protocolAuthority.publicKey.toString(),
-            CLUSTER: 'testnet'
+            CLUSTER: 'devnet'
         };
 
         fs.writeFileSync('vibe-protocol-config.json', JSON.stringify(config, null, 2));

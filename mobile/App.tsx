@@ -7,6 +7,7 @@ import Scan from './src/screens/Scan';
 import ConfirmConnection from './src/screens/ConfirmConnection';
 import Connections from './src/screens/Connections';
 import Map from './src/screens/Map';
+import CreateEvent from './src/screens/CreateEvent';
 
 // Service Initializations
 import { SyncService } from './src/blockchain/SyncService';
@@ -38,6 +39,7 @@ function App(): JSX.Element {
         <Stack.Screen name="ConfirmConnection" component={ConfirmConnection} />
         <Stack.Screen name="Connections" component={Connections} />
         <Stack.Screen name="Map" component={Map} />
+        <Stack.Screen name="CreateEvent" component={CreateEvent} />
       </Stack.Navigator>
     </NavigationContainer>
   );

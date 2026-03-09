@@ -76,7 +76,9 @@ const Home = ({ navigation }: any) => {
 
                     <TouchableOpacity
                         style={styles.glassCard}
-                        onPress={() => navigation.navigate('Scan', { myAddress: address })}
+                        onPress={() => address
+                            ? navigation.navigate('Scan', { myAddress: address })
+                            : Alert.alert('Connect Wallet', 'Please connect your wallet before scanning.')}
                     >
                         <LinearGradient colors={['#2A2A2A', '#1A1A1A']} style={styles.cardGradient}>
                             <Text style={styles.cardEmoji}>🔍</Text>
@@ -84,6 +86,31 @@ const Home = ({ navigation }: any) => {
                         </LinearGradient>
                     </TouchableOpacity>
                 </View>
+
+                {/* Organizer Tools */}
+                {address && (
+                    <View style={styles.organizerSection}>
+                        <View style={styles.organizerDivider}>
+                            <View style={styles.dividerLine} />
+                            <Text style={styles.organizerLabel}>ORGANIZER TOOLS</Text>
+                            <View style={styles.dividerLine} />
+                        </View>
+                        <TouchableOpacity
+                            style={styles.organizerCard}
+                            onPress={() => navigation.navigate('CreateEvent', { myAddress: address })}
+                            activeOpacity={0.82}
+                        >
+                            <LinearGradient colors={['rgba(20,241,149,0.12)', 'rgba(20,241,149,0.04)']} style={styles.organizerCardGradient}>
+                                <Text style={styles.organizerCardEmoji}>🎪</Text>
+                                <View style={styles.organizerCardTextWrapper}>
+                                    <Text style={styles.organizerCardTitle}>Create Event QR</Text>
+                                    <Text style={styles.organizerCardSub}>Generate a Proof-of-Attendance QR for your event</Text>
+                                </View>
+                                <Text style={styles.organizerCardArrow}>→</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 <View style={styles.footerNav}>
                     <TouchableOpacity style={styles.navButton} onPress={() => navigation.navigate('Connections')}>
@@ -225,7 +252,59 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         textTransform: 'uppercase',
         letterSpacing: 1,
-    }
+    },
+    organizerSection: {
+        marginTop: 28,
+        width: '100%',
+    },
+    organizerDivider: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+        gap: 10,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: 'rgba(20,241,149,0.15)',
+    },
+    organizerLabel: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: '#14F195',
+        letterSpacing: 2,
+    },
+    organizerCard: {
+        width: '100%',
+        borderRadius: 20,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(20,241,149,0.2)',
+    },
+    organizerCardGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 20,
+        gap: 14,
+    },
+    organizerCardEmoji: { fontSize: 28 },
+    organizerCardTextWrapper: { flex: 1 },
+    organizerCardTitle: {
+        color: '#FFF',
+        fontWeight: '800',
+        fontSize: 15,
+        marginBottom: 4,
+    },
+    organizerCardSub: {
+        color: '#64748B',
+        fontSize: 12,
+        lineHeight: 18,
+    },
+    organizerCardArrow: {
+        color: '#14F195',
+        fontWeight: '900',
+        fontSize: 18,
+    },
 });
 
 export default Home;

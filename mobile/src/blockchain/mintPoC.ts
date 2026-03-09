@@ -15,35 +15,39 @@ export interface PoCMetadata {
 
 /**
  * Mints a Proof-of-Connection token using Metaplex Bubblegum.
- * This function handles the bridge between Umi and Web3.js for MWA support.
+ *
+ * SIGNATURE BUG FIX: MWA signAndSendTransactions returns Uint8Array[] (raw signature bytes).
+ * We convert these to a base64 string so they can safely be stored in AsyncStorage (JSON)
+ * and displayed as text in the Connections screen without crashing .slice().
  */
-export async function mintPoC(metadata: PoCMetadata) {
+export async function mintPoC(metadata: PoCMetadata): Promise<{ success: boolean; signature: string; data: PoCMetadata; isDemo?: boolean }> {
     const umi = getUmi();
 
-    // HACKATHON FAIL-SAFE: If the address is a placeholder, return a mock success
+    // HACKATHON FAIL-SAFE: If the address is a placeholder, return a mock success.
     if (BUBBLEGUM_TREE_ADDRESS.toString().startsWith('vibeT5XW')) {
-        console.log('[mintPoC] Detected placeholder address, entering Demo Mode.');
-        await new Promise<void>(resolve => setTimeout(resolve, 2000)); // Simulate chain latency
+        console.log('[mintPoC] Detected placeholder address — entering Demo Mode.');
+        await new Promise<void>(resolve => setTimeout(resolve, 2000));
         return {
             success: true,
-            signature: 'DEMO_' + Math.random().toString(36).substring(7),
+            signature: 'DEMO_' + Math.random().toString(36).substring(2, 9).toUpperCase(),
             data: metadata,
-            isDemo: true
+            isDemo: true,
         };
     }
 
-    console.log('[mintPoC] Starting REAL mint process for:', metadata.walletA, 'and', metadata.walletB);
+    console.log('[mintPoC] Starting REAL mint for:', metadata.walletA, '↔', metadata.walletB);
 
     try {
-        // 1. Build the transaction using Bubblegum SDK (Umi implementation)
+        // Build the Bubblegum cNFT mint transaction via Umi.
         const txBuilder = mintToCollectionV1(umi, {
             leafOwner: publicKey(metadata.walletA),
             merkleTree: BUBBLEGUM_TREE_ADDRESS,
             collectionMint: COLLECTION_MINT,
             metadata: {
-                name: `VIBE Connection`,
+                name: 'VIBE Connection',
                 symbol: 'VIBE',
-                uri: 'https://vibe.social/metadata/poc.json',
+                // URI should point to a server endpoint that serves dynamic JSON with walletB embedded.
+                uri: `https://vibe.social/metadata/poc.json?b=${encodeURIComponent(metadata.walletB)}&ts=${metadata.timestamp}`,
                 sellerFeeBasisPoints: 0,
                 collection: { key: COLLECTION_MINT, verified: false },
                 creators: [
@@ -52,36 +56,34 @@ export async function mintPoC(metadata: PoCMetadata) {
             },
         });
 
-        // 2. Perform transaction through Mobile Wallet Adapter
         const signature = await transact(async (wallet: any) => {
-            // Re-authorize to ensure we have the correct accounts
+            // Authorise once per transact session.
             await wallet.authorize({
                 cluster: 'devnet',
-                identity: { name: 'VIBE', uri: 'https://vibe.social' }
+                identity: { name: 'VIBE', uri: 'https://vibe.social' },
             });
 
-            // 3. Ensure transaction has a fresh blockhash
+            // Attach a fresh blockhash to prevent replay attacks.
             const { blockhash } = await umi.rpc.getLatestBlockhash({ commitment: 'confirmed' });
 
-            // 4. Build unsigned Umi transaction and convert to Web3.js format
             const umiTx = txBuilder.setBlockhash(blockhash).build(umi);
             const web3jsTx = toWeb3JsTransaction(umiTx);
 
-            // 5. MWA signs and sends the transaction
-            const signedTransactions = await wallet.signAndSendTransactions({
+            // MWA signs and sends. Returns Uint8Array[] where each element is the
+            // 64-byte Ed25519 signature corresponding to the transaction signature.
+            const signatureBytes: readonly Uint8Array[] = await wallet.signAndSendTransactions({
                 transactions: [web3jsTx],
             });
 
-            return signedTransactions[0];
+            // Convert raw signature bytes → base64 string for safe JSON serialisation.
+            // base64 is used (over bs58) because Buffer is always available in RN.
+            const sigBytes = signatureBytes[0];
+            return Buffer.from(sigBytes).toString('base64');
         });
 
-        console.log('[mintPoC] Successfully minted. Signature:', signature);
+        console.log('[mintPoC] Successfully minted. Signature (base64):', signature);
 
-        return {
-            success: true,
-            signature,
-            data: metadata
-        };
+        return { success: true, signature, data: metadata };
     } catch (error: any) {
         console.error('[mintPoC] Transaction failed:', error);
         throw error;

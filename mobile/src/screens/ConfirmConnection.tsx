@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Geolocation from '@react-native-community/geolocation';
 import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator, Alert, Platform, Animated, Dimensions } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { mintPoC } from '../blockchain/mintPoC';
 import { StorageService } from '../blockchain/StorageService';
+import { isValidPublicKey } from '../blockchain/wallet';
 import { CONFIG } from '../config';
 
 const { width } = Dimensions.get('window');
@@ -13,6 +14,10 @@ const ConfirmConnection = ({ route, navigation }: any) => {
     const { targetAddress, myAddress } = route.params;
     const [isMinting, setIsMinting] = useState(false);
     const [location, setLocation] = useState({ lat: 0, lng: 0 });
+
+    // useRef for double-mint prevention: unlike useState, updating a ref does not re-render,
+    // so subsequent rapid taps are blocked even before the async mintPoC resolves.
+    const mintingRef = useRef(false);
 
     // Premium Animations
     const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -50,6 +55,28 @@ const ConfirmConnection = ({ route, navigation }: any) => {
     }, []);
 
     const handleConfirm = async () => {
+        // DOUBLE-MINT PREVENTION: Block if already minting (ref is synchronous, unlike state).
+        if (mintingRef.current) return;
+
+        // WALLET NOT CONNECTED: Cannot proceed without a valid source wallet.
+        if (!myAddress || !isValidPublicKey(myAddress)) {
+            Alert.alert('Wallet Not Connected', 'Please connect your wallet before confirming a connection.');
+            return;
+        }
+
+        // SELF-CONNECTION GUARD: Prevent a wallet from connecting to itself.
+        if (targetAddress === myAddress) {
+            Alert.alert('Invalid Connection', 'You cannot connect to your own wallet.');
+            return;
+        }
+
+        // ADDRESS VALIDATION: Ensure targetAddress is a proper Solana public key.
+        if (!targetAddress || !isValidPublicKey(targetAddress)) {
+            Alert.alert('Invalid Address', 'The scanned wallet address is not a valid Solana public key.');
+            return;
+        }
+
+        mintingRef.current = true;
         setIsMinting(true);
         try {
             const res = await mintPoC({
@@ -64,11 +91,13 @@ const ConfirmConnection = ({ route, navigation }: any) => {
                 const connectionData = { ...res.data, signature: res.signature };
                 await StorageService.saveConnection(connectionData);
 
+                // Fire-and-forget POST to the indexer API. Failures here are non-fatal;
+                // the connection is already persisted locally.
                 fetch(`${CONFIG.API_BASE_URL}/api/connections`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(connectionData),
-                }).catch(() => { });
+                }).catch((e) => console.warn('[ConfirmConnection] API sync failed:', e));
 
                 Alert.alert('VIBE Secured!', 'Connection minted successfully.', [
                     { text: 'Awesome', onPress: () => navigation.navigate('Home') }
@@ -84,6 +113,7 @@ const ConfirmConnection = ({ route, navigation }: any) => {
             });
             Alert.alert('Offline Handshake', 'Sync will occur automatically when online.', [{ text: 'OK', onPress: () => navigation.navigate('Home') }]);
         } finally {
+            mintingRef.current = false;
             setIsMinting(false);
         }
     };

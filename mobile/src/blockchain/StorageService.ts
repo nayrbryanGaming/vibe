@@ -19,10 +19,25 @@ export interface SavedConnection extends PoCMetadata {
 export class StorageService {
     /**
      * Saves a verified connection to local storage.
+     *
+     * DEDUPLICATION: A walletA+walletB pair (order-independent) is only stored once.
+     * This prevents the connection list from showing duplicates if the user confirms
+     * twice or if a sync retry fires after the entry was already saved.
      */
     static async saveConnection(connection: PoCMetadata & { signature: string }) {
         try {
             const existing = await this.getConnections();
+
+            // Order-independent duplicate check: sort both wallet addresses to normalise the key.
+            const newKey = [connection.walletA, connection.walletB].sort().join(':');
+            const isDuplicate = existing.some(
+                (c) => [c.walletA, c.walletB].sort().join(':') === newKey
+            );
+            if (isDuplicate) {
+                console.log('[StorageService] Duplicate connection ignored:', newKey);
+                return;
+            }
+
             const updated: SavedConnection[] = [{ ...connection, verified: true }, ...existing];
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
         } catch (error) {

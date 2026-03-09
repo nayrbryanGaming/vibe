@@ -1,22 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View, Dimensions, TouchableOpacity } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { StorageService } from '../blockchain/StorageService';
 import { CONFIG } from '../config';
-
-const { width, height } = Dimensions.get('window');
-
-const darkMapStyle = [
-    { "elementType": "geometry", "stylers": [{ "color": "#1A1A1A" }] },
-    { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
-    { "elementType": "labels.text.fill", "stylers": [{ "color": "#4A4A4A" }] },
-    { "elementType": "labels.text.stroke", "stylers": [{ "color": "#1A1A1A" }] },
-    { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "color": "#333333" }] },
-    { "featureType": "poi", "elementType": "geometry", "stylers": [{ "color": "#121212" }] },
-    { "featureType": "road", "elementType": "geometry.fill", "stylers": [{ "color": "#222222" }] },
-    { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#000000" }] }
-];
 
 const Map = ({ navigation }: any) => {
     const [localConnections, setLocalConnections] = React.useState<any[]>([]);
@@ -45,38 +31,13 @@ const Map = ({ navigation }: any) => {
 
     return (
         <View style={styles.container}>
-            <MapView
-                provider={PROVIDER_GOOGLE}
-                style={styles.map}
-                initialRegion={{
-                    latitude: localConnections.length > 0 ? localConnections[0].latitude : -6.1751,
-                    longitude: localConnections.length > 0 ? localConnections[0].longitude : 106.8272,
-                    latitudeDelta: 10,
-                    longitudeDelta: 10,
-                }}
-                customMapStyle={darkMapStyle}
-            >
-                {heatmapDots.map((dot, idx) => (
-                    <Marker
-                        key={`global-${idx}`}
-                        coordinate={{ latitude: dot.latitude, longitude: dot.longitude }}
-                        opacity={0.4}
-                    >
-                        <View style={styles.globalMarker} />
-                    </Marker>
-                ))}
-
-                {localConnections.map((conn) => (
-                    <Marker
-                        key={conn.signature}
-                        coordinate={{ latitude: conn.latitude, longitude: conn.longitude }}
-                        title="VIBE Connection"
-                        description={`${conn.walletB.slice(0, 12)}...`}
-                    >
-                        <LinearGradient colors={['#14F195', '#10BC74']} style={styles.localMarker} />
-                    </Marker>
-                ))}
-            </MapView>
+            <View style={styles.placeholder}>
+                <LinearGradient colors={['#9945FF', '#7935DF']} style={styles.placeholderIcon}>
+                    <Text style={styles.iconTxt}>🗺</Text>
+                </LinearGradient>
+                <Text style={styles.placeholderTitle}>NETWORK MAP</Text>
+                <Text style={styles.placeholderSub}>{globalStats.totalConnections} connections · {globalStats.totalUsers} wallets</Text>
+            </View>
 
             <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
                 <Text style={styles.backTxt}>BACK</Text>
@@ -100,8 +61,29 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#000',
     },
-    map: {
-        ...StyleSheet.absoluteFillObject,
+    placeholder: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+    },
+    placeholderIcon: {
+        width: 80,
+        height: 80,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 8,
+    },
+    placeholderTitle: {
+        color: '#FFF',
+        fontSize: 20,
+        fontWeight: '900',
+        letterSpacing: 3,
+    },
+    placeholderSub: {
+        color: '#666',
+        fontSize: 13,
     },
     backBtn: {
         position: 'absolute',
@@ -160,22 +142,6 @@ const styles = StyleSheet.create({
         fontSize: 11,
         marginTop: 2,
     },
-    globalMarker: {
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        backgroundColor: '#9945FF',
-        shadowColor: '#9945FF',
-        shadowRadius: 10,
-        shadowOpacity: 1,
-    },
-    localMarker: {
-        width: 20,
-        height: 20,
-        borderRadius: 10,
-        borderWidth: 2,
-        borderColor: '#FFF',
-    }
 });
 
 export default Map;

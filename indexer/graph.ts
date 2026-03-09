@@ -22,8 +22,15 @@ export class SocialGraph {
             this.nodes.set(walletB, { wallet: walletB, connections: new Set(), metadata: [] });
         }
 
+        // DEDUPLICATION: Since we always add both directions (A→B and B→A),
+        // checking one direction is sufficient to detect any duplicate attempt.
+        if (this.nodes.get(walletA)!.connections.has(walletB)) {
+            return; // Connection already exists — do not re-add or double-count heatmap data.
+        }
+
         this.nodes.get(walletA)!.connections.add(walletB);
         this.nodes.get(walletB)!.connections.add(walletA);
+        // Metadata (including GPS coordinates) is stored once on walletA to avoid heatmap duplication.
         this.nodes.get(walletA)!.metadata.push(metadata);
     }
 

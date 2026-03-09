@@ -1,40 +1,60 @@
 import { globalGraph } from './graph';
+import { saveConnection } from '../server/persistence';
 
 /**
  * VIBE PoC Indexer
- * 
+ *
  * This module is responsible for listening to the Metaplex Bubblegum tree
  * and indexing new Proof-of-Connection tokens.
  */
 
-export const startIndexer = () => {
+/**
+ * Seeds demo data into PostgreSQL and the in-memory graph.
+ * Called only when the connections table is empty (first boot).
+ */
+export const startIndexer = async (): Promise<void> => {
     console.log('VIBE Indexer: Subscribing to SOLTAG Protocol events...');
 
-    // Simulation: High-density population of social graph for hackathon brilliance
+    // Simulation: 50 fake users arranged in an interconnected mesh around Jakarta
     const seedWallets = Array.from({ length: 50 }, (_, i) => `vibe...user${i}`);
 
-    // Generate a interconnected mesh
-    seedWallets.forEach((w, i) => {
+    for (let i = 0; i < seedWallets.length; i++) {
+        const w = seedWallets[i];
         const neighbors = [(i + 1) % 50, (i + 5) % 50, (i + 13) % 50];
-        neighbors.forEach(nIdx => {
-            globalGraph.addConnection(w, seedWallets[nIdx], {
+        for (const nIdx of neighbors) {
+            const meta = {
                 timestamp: Date.now() - Math.random() * 86400000,
-                latitude: -6.1751 + (Math.random() - 0.5) * 2, // Distributed around Jakarta
-                longitude: 106.8272 + (Math.random() - 0.5) * 2
+                latitude: -6.1751 + (Math.random() - 0.5) * 2,
+                longitude: 106.8272 + (Math.random() - 0.5) * 2,
+            };
+            const saved = await saveConnection({
+                walletA: w,
+                walletB: seedWallets[nIdx],
+                ...meta,
+                signature: null,
+                eventId: 'demo-seed',
             });
-        });
-    });
+            if (saved) {
+                globalGraph.addConnection(w, seedWallets[nIdx], meta);
+            }
+        }
+    }
 
     console.log('VIBE Indexer: Social Graph Initialized with', globalGraph.getGlobalStats().totalUsers, 'nodes and global heatmap data.');
     console.log('VIBE Indexer: [DEMO MODE ACTIVE] Accepting simulated on-chain signatures.');
 };
 
-export const syncOfflineConnections = async (localConnections: any[]) => {
+export const syncOfflineConnections = async (localConnections: any[]): Promise<void> => {
     console.log('VIBE Indexer: Syncing', localConnections.length, 'offline connections...');
     for (const conn of localConnections) {
-        globalGraph.addConnection(conn.walletA, conn.walletB, conn);
+        if (conn.walletA && conn.walletB) {
+            await saveConnection(conn);
+            globalGraph.addConnection(conn.walletA, conn.walletB, conn);
+        }
     }
 };
 
-// Start if executed directly
-startIndexer();
+// Only auto-execute when run directly as a process, not when imported as a module.
+if (require.main === module) {
+    startIndexer().catch(console.error);
+}

@@ -30,7 +30,7 @@ const Connections = ({ navigation }: any) => {
     }, []);
 
     const renderConnection = (item: SavedConnection | PoCMetadata, isPending: boolean) => (
-        <View key={item.timestamp} style={styles.cardWrapper}>
+        <View key={`${item.walletA}-${item.walletB}-${item.timestamp}`} style={styles.cardWrapper}>
             <LinearGradient
                 colors={isPending ? ['rgba(153, 69, 255, 0.1)', 'rgba(153, 69, 255, 0.05)'] : ['rgba(20, 241, 149, 0.1)', 'rgba(20, 241, 149, 0.05)']}
                 style={styles.card}
@@ -58,17 +58,19 @@ const Connections = ({ navigation }: any) => {
                             {item.walletB.slice(0, 8)}...{item.walletB.slice(-8)}
                         </Text>
                         <Text style={styles.location}>
-                            📍 {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
+                            📍 {(item.latitude ?? 0).toFixed(4)}, {(item.longitude ?? 0).toFixed(4)}
                         </Text>
                     </View>
                 </View>
 
-                {!isPending && (item as SavedConnection).signature && (
+                {'signature' in item && item.signature ? (
                     <View style={styles.proofContainer}>
-                        <Text style={styles.proofLabel}>TRANSACTION HASH</Text>
-                        <Text style={styles.signature}>{(item as SavedConnection).signature.slice(0, 32)}...</Text>
+                        <Text style={styles.proofLabel}>PROOF OF CONNECTION</Text>
+                        <Text style={styles.signature} numberOfLines={1}>
+                            {item.signature.slice(0, 40)}…
+                        </Text>
                     </View>
-                )}
+                ) : null}
             </LinearGradient>
         </View>
     );
