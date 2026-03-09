@@ -71,7 +71,11 @@ function ensureInitialized(): Promise<void> {
 
             const { totalUsers, totalConnections } = globalGraph.getGlobalStats();
             console.log(`[VIBE API] Graph ready: ${totalUsers} nodes, ${totalConnections} connections.`);
-        })();
+        })().catch((err) => {
+            // Reset so the next request can retry (e.g. transient DB connection failure)
+            initPromise = null;
+            throw err;
+        });
     }
     return initPromise;
 }
@@ -131,8 +135,6 @@ app.post('/api/connections', async (req: Request, res: Response): Promise<void> 
     };
 
     await saveConnection({ walletA, walletB, ...meta });
-
-    await ensureInitialized();
     globalGraph.addConnection(walletA, walletB, meta);
 
     console.log(`[VIBE API] PoC recorded: ${walletA.slice(0, 8)}… ↔ ${walletB.slice(0, 8)}…`);

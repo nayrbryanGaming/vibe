@@ -6,26 +6,32 @@
 
 import { Pool } from 'pg';
 
-if (!process.env.DATABASE_URL) {
-    console.error('[VIBE DB] ERROR: DATABASE_URL environment variable is not set.');
-    console.error('[VIBE DB] Add DATABASE_URL to your .env file for local dev,');
-    console.error('[VIBE DB] or set it in Vercel Dashboard → Settings → Environment Variables.');
-    process.exit(1);
+/**
+ * Lazy pool factory — avoids process.exit() at module load time.
+ * On Vercel, module-level process.exit() kills the function before it can
+ * return an HTTP 500; throwing here propagates to ensureInitialized() which
+ * resets initPromise so the next warm request can retry.
+ */
+function createPool(): Pool {
+    const url = process.env.DATABASE_URL;
+    if (!url) {
+        throw new Error(
+            '[VIBE DB] DATABASE_URL is not set. ' +
+            'Add it to .env for local dev, or in Vercel Dashboard → Settings → Environment Variables.'
+        );
+    }
+    const p = new Pool({
+        connectionString: url,
+        ssl: url.includes('localhost') || url.includes('127.0.0.1')
+            ? undefined
+            : { rejectUnauthorized: false },
+        max: 10,
+        idleTimeoutMillis: 30_000,
+        connectionTimeoutMillis: 5_000,
+    });
+    p.on('error', (err) => console.error('[VIBE DB] Unexpected pool error:', err));
+    return p;
 }
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    // Required for Vercel Postgres, Neon, Railway, Supabase (all use SSL in production)
-    ssl: process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1')
-        ? undefined
-        : { rejectUnauthorized: false },
-    max: 10,           // max pool size (Vercel serverless: 1 connection per function is fine)
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
-});
-
-pool.on('error', (err) => {
-    console.error('[VIBE DB] Unexpected pool error:', err);
-});
-
+const pool = createPool();
 export default pool;
